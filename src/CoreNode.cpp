@@ -89,6 +89,7 @@ int main(int argc, char** argv)
 	nodelet::Loader nodelet;
 	nodelet::M_string remap(ros::names::getRemappings());
 	std::string nodelet_name = ros::this_node::getName();
+	ROS_WARN("the nodelet_name is %s ",nodelet_name);
 	nodelet.load(nodelet_name, "rtabmap_ros/rtabmap", remap, nargv);
 	ROS_INFO("rtabmap %s started...", RTABMAP_VERSION);
 	ros::spin();

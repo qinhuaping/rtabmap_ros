@@ -1153,9 +1153,10 @@ bool convertRGBDMsgs(
 						depthMsgs[i]->image.cols,
 						depthHeight,
 						depthMsgs[i]->image.rows).c_str());
-
+ 
 		// use depth's stamp so that geometry is sync to odom, use rgb frame as we assume depth is registered (normally depth msg should have same frame than rgb)
-		rtabmap::Transform localTransform = rtabmap_ros::getTransform(frameId, imageMsgs[i]->header.frame_id, depthMsgs[i]->header.stamp, listener, waitForTransform);
+		rtabmap::Transform localTransform = rtabmap_ros::getTransform
+			(frameId, imageMsgs[i]->header.frame_id, depthMsgs[i]->header.stamp, listener, waitForTransform);
 		if(localTransform.isNull())
 		{
 			ROS_ERROR("TF of received depth image %d at time %fs is not set!", i, depthMsgs[i]->header.stamp.toSec());

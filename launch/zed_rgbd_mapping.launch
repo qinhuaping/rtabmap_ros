@@ -1,4 +1,4 @@
-
+<xml/>
 <launch>
   <!-- Backward compatibility launch file, use rtabmap.launch instead -->
   
@@ -8,25 +8,26 @@
            $ roslaunch openni2_launch openni2.launch depth_registration:=true -->
  
   <!-- Choose visualization -->
-  <arg name="rviz"                    default="false" />
-  <arg name="rtabmapviz"              default="true" /> 
-  
+  <arg name="rviz"                    default="true" />
+  <arg name="rtabmapviz"              default="false" /> 
   <!-- Localization-only mode -->
   <arg name="localization"            default="false"/>
-  
+  <arg name="enable_rotate" default="true" />
+  <arg name="sensorz" default="0.63" />
+  <arg if="$(arg enable_rotate)" name="depth_frame" default="zed_initial_frame" />
   <!-- Corresponding config files -->
   <arg name="rtabmapviz_cfg"          default="~/.ros/rtabmap_gui.ini" />
   <arg name="rviz_cfg"                default="$(find rtabmap_ros)/launch/config/rgbd.rviz" />
   
-  <arg name="frame_id"                default="camera_link"/>   <!-- Fixed frame id, you may set "base_link" or "base_footprint" if they are published -->
+  <arg name="frame_id"                default="base_link"/>   <!-- Fixed frame id, you may set "base_link" or "base_footprint" if they are published -->
   <arg name="database_path"           default="~/.ros/rtabmap.db"/>
   <arg name="rtabmap_args"            default=""/>              <!-- delete_db_on_start, udebug -->
   <arg name="launch_prefix"           default=""/>              <!-- for debugging purpose, it fills launch-prefix tag of the nodes -->
   <arg name="approx_sync"             default="true"/>         <!-- if timestamps of the input topics are not synchronized -->
    
-  <arg name="rgb_topic"               default="/camera/rgb/image_rect_color" />
-  <arg name="depth_registered_topic"  default="/camera/depth_registered/image_raw" />
-  <arg name="camera_info_topic"       default="/camera/rgb/camera_info" />
+  <arg name="rgb_topic"               default="/zed/left/image_rect_color" />
+  <arg name="depth_registered_topic"  default="/zed/depth/depth_registered" />
+  <arg name="camera_info_topic"       default="/zed/left/camera_info" />
   <arg name="compressed"              default="false"/>
    
   <arg name="subscribe_scan"          default="false"/>         <!-- Assuming 2D scan if set, rtabmap will do 3DoF mapping instead of 6DoF -->
@@ -36,7 +37,7 @@
   <arg name="scan_cloud_topic"        default="/scan_cloud"/>
   
   <arg name="visual_odometry"         default="true"/>          <!-- Generate visual odometry -->
-  <arg name="odom_topic"              default="/odom"/>         <!-- Odometry topic used if visual_odometry is false -->
+  <arg name="odom_topic"              default="/zed/odom"/>         <!-- Odometry topic used if visual_odometry is false -->
   <arg name="odom_frame_id"           default=""/>              <!-- If set, TF is used to get odometry instead of the topic -->
    
   <arg name="namespace"               default="rtabmap"/>
@@ -74,6 +75,18 @@
     <arg name="odom_topic"              value="$(arg odom_topic)"/>    
     <arg name="odom_frame_id"           value="$(arg odom_frame_id)"/>         
     <arg name="odom_args"               value="$(arg rtabmap_args)"/>
-  </include>
-
+    
+</include>
+   <arg name="pi/2" value="1.5707963267948966" />
+   <arg name="name_suffix" default="yuiwongoctomap" />
+ <arg
+    if="$(arg enable_rotate)"
+    name="optical_rotate"
+    value="0 0 $(arg sensorz) -$(arg pi/2) 0 -$(arg pi/2)" />
+  <node
+    if="$(arg enable_rotate)"
+    name="depth_rotate_to_base_link$(arg name_suffix)"
+    pkg="tf"
+    type="static_transform_publisher"
+    args="$(arg optical_rotate) base_link $(arg depth_frame) 100" />
 </launch>

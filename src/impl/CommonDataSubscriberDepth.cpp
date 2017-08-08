@@ -324,6 +324,36 @@ void CommonDataSubscriber::depthOdomDataScan3dInfoCallback(
 	sensor_msgs::LaserScanConstPtr scan2dMsg; // Null
 	commonSingleDepthCallback(odomMsg, userDataMsg, cv_bridge::toCvShare(imageMsg), cv_bridge::toCvShare(depthMsg), *cameraInfoMsg, scan2dMsg, scanMsg, odomInfoMsg);
 }
+void CommonDataSubscriber::setupPclCallbacks(
+		ros::NodeHandle & nh,
+		ros::NodeHandle & pnh,
+		bool subscribeOdom,
+		bool subscribeUserData,
+		bool subscribeScan2d,
+		bool subscribeScan3d,
+		bool subscribeOdomInfo,
+		int queueSize,
+		bool approxSync)
+{
+	ROS_INFO("setup pcl callback");
+	pclSub_.subscribe(nh,"pcl",1);
+	odomSub_.subscribe(nh, "odom", 1);
+	userDataSub_.subscribe(nh, "user_data", 1);
+	subscribedToScan2d_ = true;
+	scanSub_.subscribe(nh, "scan", 1);
+	SYNC_DECL3(pclOdomDataScan2d, approxSync, queueSize, odomSub_,  pclSub_, scanSub_);
+	
+}
+
+void CommonDataSubscriber::pclOdomDataScan2dCallback(
+		const nav_msgs::OdometryConstPtr & odomMsg,
+		const sensor_msgs::PointCloud2ConstPtr & pclMsg,
+		const sensor_msgs::LaserScanConstPtr& scanMsg
+		)
+{
+    //ROS_WARN("HELLO");
+	commonSinglePclCallback(odomMsg,pclMsg,scanMsg);
+}
 
 void CommonDataSubscriber::setupDepthCallbacks(
 		ros::NodeHandle & nh,

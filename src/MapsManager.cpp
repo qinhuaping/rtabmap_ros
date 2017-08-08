@@ -62,7 +62,7 @@ MapsManager::MapsManager() :
 		cloudSubtractFiltering_(false),
 		cloudSubtractFilteringMinNeighbors_(2),
 		mapFilterRadius_(0.0),
-		mapFilterAngle_(30.0), // degrees
+		mapFilterAngle_(0.0), // degrees
 		mapCacheCleanup_(true),
 		negativePosesIgnored_(false),
 		negativeScanEmptyRayTracing_(true),

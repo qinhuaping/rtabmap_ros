@@ -37,6 +37,14 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <sensor_msgs/image_encodings.h>
 #include <cv_bridge/cv_bridge.h>
 #include <pcl/io/pcd_io.h>
+#include <pcl_conversions/pcl_conversions.h>
+#include <pcl/point_cloud.h>
+#include <pcl/point_types.h>
+#include <pcl/visualization/pcl_visualizer.h>
+#include <boost/thread/thread.hpp>
+#include <pcl/visualization/cloud_viewer.h>
+
+
 
 #include <visualization_msgs/MarkerArray.h>
 
@@ -760,6 +768,140 @@ bool CoreWrapper::odomTFUpdate(const ros::Time & stamp)
 		return true;
 	}
 	return false;
+}
+
+void CoreWrapper::commonPclCallback(
+			const nav_msgs::OdometryConstPtr & odomMsg,
+			const sensor_msgs::PointCloud2ConstPtr & pclMsg,
+			const sensor_msgs::LaserScanConstPtr& scan2dMsg)
+{
+	std::string odomFrameId = odomFrameId_;
+	if(odomMsg.get())
+	{
+		odomFrameId = odomMsg->header.frame_id;
+		if(!odomUpdate(odomMsg))
+		{
+			return;
+		}
+	}
+	else if(scan2dMsg.get())
+	{
+		if(!odomTFUpdate(scan2dMsg->header.stamp))
+		{
+			return;
+		}
+	}
+	else if (pclMsg.get())
+	{
+		if(!odomTFUpdate(pclMsg->header.stamp))
+		{
+			return;
+		}
+	}
+	
+	cv::Mat scan;
+	Transform scanLocalTransform = Transform::getIdentity();
+	pcl::PointCloud<pcl::PointXYZ> scanCloud2d;
+	bool genMaxScanPts = 0;
+	
+	if(scan2dMsg.get() != 0)
+	{
+		if(!rtabmap_ros::convertScanMsg(
+				scan2dMsg,
+				frameId_,
+				odomSensorSync_?odomFrameId:"",
+				lastPoseStamp_,
+				scan,
+				scanLocalTransform,
+				tfListener_,
+				waitForTransform_?waitForTransformDuration_:0))
+		{
+			NODELET_ERROR("Could not convert laser scan msg! Aborting rtabmap update...");
+			return;
+		}
+		Transform zAxis(0,0,1,0,0,0);
+		if((scanLocalTransform.rotation()*zAxis).z() < 0)
+		{
+			cv::Mat flipScan;
+			cv::flip(scan, flipScan, 1);
+			scan = flipScan;
+		}
+		if(rtabmap_.getMemory() && uStrNumCmp(rtabmap_.getMemory()->getDatabaseVersion(), "0.11.10") < 0)
+		{
+			// backward compatibility, project 2D scan in /base_link frame
+			scan = util3d::transformLaserScan(scan, scanLocalTransform);
+			scanLocalTransform = Transform::getIdentity();
+		}
+	}
+
+
+	Transform groundTruthPose;
+	if(!groundTruthFrameId_.empty())
+	{
+		groundTruthPose = rtabmap_ros::getTransform(groundTruthFrameId_, groundTruthBaseFrameId_, lastPoseStamp_, tfListener_, waitForTransform_?waitForTransformDuration_:0.0);
+	}
+
+	cv::Mat userData;
+	pcl::PointCloud<pcl::PointXYZRGB> cloud;
+	pcl::fromROSMsg(*pclMsg,cloud);
+	
+	SensorData data(scan,
+			LaserScanInfo(
+					scan2dMsg.get() != 0?
+					(int)scan2dMsg->ranges.size():(genScan_?genMaxScanPts:0),
+					scan2dMsg.get() != 0?
+					scan2dMsg->range_max:(genScan_?genScanMaxDepth_:0.0f),
+					scanLocalTransform),
+			cloud,
+			lastPoseIntermediate_?-1:(int)scan2dMsg->header.seq,
+			rtabmap_ros::timestampFromROS(lastPoseStamp_),
+			userData);
+	data.setGroundTruth(groundTruthPose);
+
+	//global pose
+	if(!globalPose_.header.stamp.isZero())
+	{
+		// assume sensor is fixed
+		Transform sensorToBase = rtabmap_ros::getTransform(
+				globalPose_.header.frame_id,
+				frameId_,
+				lastPoseStamp_,
+				tfListener_,
+				waitForTransform_?waitForTransformDuration_:0.0);
+		if(!sensorToBase.isNull())
+		{
+			Transform globalPose = rtabmap_ros::transformFromPoseMsg(globalPose_.pose.pose);
+			globalPose *= sensorToBase; // transform global pose from sensor frame to robot base frame
+
+			// Correction of the global pose accounting the odometry movement since we received it
+			Transform correction = rtabmap_ros::getTransform(
+					frameId_,
+					odomFrameId,
+					globalPose_.header.stamp,
+					lastPoseStamp_,
+					tfListener_,
+					waitForTransform_?waitForTransformDuration_:0.0);
+			if(!correction.isNull())
+			{
+				globalPose *= correction;
+			}
+			else
+			{
+				NODELET_WARN("Could not adjust global pose accordingly to latest odometry pose. "
+						"If odometry is small since it received the global pose and "
+						"covariance is large, this should not be a problem.");
+			}
+			cv::Mat globalPoseCovariance = cv::Mat(6,6, CV_64FC1, (void*)globalPose_.pose.covariance.data()).clone();
+			data.setGlobalPose(globalPose, globalPoseCovariance);
+		}
+	}
+	globalPose_.header.stamp = ros::Time(0);
+
+	process(lastPoseStamp_,
+			data,
+			lastPose_,
+			odomFrameId,
+			covariance_);
 }
 
 void CoreWrapper::commonDepthCallback(

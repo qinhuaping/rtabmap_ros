@@ -21,7 +21,10 @@ find_package(rviz)
 find_package(RTABMap 0.13.0 REQUIRED)
 
 find_package(OpenCV REQUIRED)
-
+message(STATUS "OpenCV library status:")
+message(STATUS "    version: ${OpenCV_VERSION}")
+message(STATUS "    libraries: ${OpenCV_LIBS}")
+message(STATUS "    include path: ${OpenCV_DIR}")
 #Qt stuff
 # If librtabmap_gui.so is found, rtabmapviz will be built
 # If rviz is found, plugins will be built

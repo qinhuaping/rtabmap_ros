@@ -86,6 +86,14 @@ private:
 	bool odomUpdate(const nav_msgs::OdometryConstPtr & odomMsg);
 	bool odomTFUpdate(const ros::Time & stamp); // TF odom
 
+
+	virtual void commonPclCallback(
+				const nav_msgs::OdometryConstPtr & odomMsg,
+				const sensor_msgs::PointCloud2ConstPtr & pclMsg,
+				//const std::vector<sensor_msgs::CameraInfo> & cameraInfoMsgs,
+				const sensor_msgs::LaserScanConstPtr& scan2dMsg
+				);
+
 	virtual void commonDepthCallback(
 				const nav_msgs::OdometryConstPtr & odomMsg,
 				const rtabmap_ros::UserDataConstPtr & userDataMsg,

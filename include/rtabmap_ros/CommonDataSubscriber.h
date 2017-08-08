@@ -58,18 +58,23 @@ class CommonDataSubscriber {
 public:
 	CommonDataSubscriber(bool gui);
 	virtual ~CommonDataSubscriber();
-
+	bool isSubscribedToPointcloud() const{return subscribedToPCL_;}
 	bool isSubscribedToDepth() const  {return subscribedToDepth_;}
 	bool isSubscribedToStereo() const {return subscribedToStereo_;}
 	bool isSubscribedToRGBD() const   {return subscribedToRGBD_;}
 	bool isSubscribedToScan2d() const {return subscribedToScan2d_;}
 	bool isSubscribedToScan3d() const {return subscribedToScan3d_;}
 	bool isSubscribedToOdomInfo() const {return subscribedToOdomInfo_;}
-	bool isDataSubscribed() const {return isSubscribedToDepth() || isSubscribedToStereo() || isSubscribedToRGBD();}
+	bool isDataSubscribed() const {return isSubscribedToDepth()|| isSubscribedToPointcloud() || isSubscribedToStereo() || isSubscribedToRGBD();}
 	int getQueueSize() const {return queueSize_;}
 
 protected:
 	void setupCallbacks(ros::NodeHandle & nh, ros::NodeHandle & pnh, const std::string & name);
+	virtual void commonPclCallback(
+				const nav_msgs::OdometryConstPtr & odomMsg,
+			    const sensor_msgs::PointCloud2ConstPtr & pclMsg,
+				const sensor_msgs::LaserScanConstPtr& scanMsg) = 0;
+
 	virtual void commonDepthCallback(
 				const nav_msgs::OdometryConstPtr & odomMsg,
 				const rtabmap_ros::UserDataConstPtr & userDataMsg,
@@ -88,6 +93,11 @@ protected:
 				const sensor_msgs::LaserScanConstPtr& scanMsg,
 				const sensor_msgs::PointCloud2ConstPtr& scan3dMsg,
 				const rtabmap_ros::OdomInfoConstPtr& odomInfoMsg) = 0;
+	void commonSinglePclCallback(
+				const nav_msgs::OdometryConstPtr & odomMsg,
+				const sensor_msgs::PointCloud2ConstPtr & pclMsg,
+				//const sensor_msgs::CameraInfo & cameraInfoMsg,
+				const sensor_msgs::LaserScanConstPtr& scanMsg);
 
 	void commonSingleDepthCallback(
 				const nav_msgs::OdometryConstPtr & odomMsg,
@@ -102,6 +112,16 @@ protected:
 private:
 	void warningLoop();
 	void callbackCalled() {callbackCalled_ = true;}
+	void setupPclCallbacks(
+		ros::NodeHandle & nh,
+		ros::NodeHandle & pnh,
+		bool subscribeOdom,
+		bool subscribeUserData,
+		bool subscribeScan2d,
+		bool subscribeScan3d,
+		bool subscribeOdomInfo,
+		int queueSize,
+		bool approxSync);
 	void setupDepthCallbacks(
 			ros::NodeHandle & nh,
 			ros::NodeHandle & pnh,
@@ -169,12 +189,17 @@ private:
 	boost::thread* warningThread_;
 	bool callbackCalled_;
 	bool subscribedToDepth_;
+	bool subscribedToPCL_;
 	bool subscribedToStereo_;
 	bool subscribedToRGBD_;
 	bool subscribedToScan2d_;
 	bool subscribedToScan3d_;
 	bool subscribedToOdomInfo_;
 	std::string name_;
+
+	//for pcl callback
+	message_filters::Subscriber<sensor_msgs::PointCloud2>  pclSub_;
+
 
 	//for depth callback
 	image_transport::SubscriberFilter imageSub_;
@@ -196,6 +221,10 @@ private:
 	message_filters::Subscriber<sensor_msgs::LaserScan> scanSub_;
 	message_filters::Subscriber<sensor_msgs::PointCloud2> scan3dSub_;
 	message_filters::Subscriber<rtabmap_ros::OdomInfo> odomInfoSub_;
+
+	//PCL+ odom+userdata
+	DATA_SYNCS3(pclOdomDataScan2d,nav_msgs::Odometry,sensor_msgs::PointCloud2,sensor_msgs::LaserScan);
+
 
 	// RGB + Depth
 	DATA_SYNCS3(depth, sensor_msgs::Image, sensor_msgs::Image, sensor_msgs::CameraInfo);

@@ -40,6 +40,11 @@ CommonDataSubscriber::CommonDataSubscriber(bool gui) :
 		subscribedToScan2d_(false),
 		subscribedToScan3d_(false),
 		subscribedToOdomInfo_(false),
+        subscribedToPCL_(false),
+		//pcl+odom+userdata
+		SYNC_INIT(pclOdomDataScan2d),
+
+
 
 		// RGB + Depth
 		SYNC_INIT(depth),
@@ -217,6 +222,7 @@ void CommonDataSubscriber::setupCallbacks(ros::NodeHandle & nh, ros::NodeHandle 
 	bool subscribeScan3d = false;
 	bool subscribeOdomInfo = false;
 	bool subscribeUserData = false;
+	//bool subscribepcl  = false;
 	int rgbdCameras = 1;
 	name_ = name;
 
@@ -232,6 +238,12 @@ void CommonDataSubscriber::setupCallbacks(ros::NodeHandle & nh, ros::NodeHandle 
 	pnh.param("subscribe_rgbd",      subscribedToRGBD_, subscribedToRGBD_);
 	pnh.param("subscribe_odom_info", subscribeOdomInfo, subscribeOdomInfo);
 	pnh.param("subscribe_user_data", subscribeUserData, subscribeUserData);
+	pnh.param("subscribe_pcl", subscribedToPCL_, subscribedToPCL_);
+	if(subscribedToPCL_)
+	{
+		subscribedToDepth_ = false;
+		subscribedToStereo_ = false;
+	}
 	if(subscribedToDepth_ && subscribedToStereo_)
 	{
 		ROS_WARN("rtabmap: Parameters subscribe_depth and subscribe_stereo cannot be true at the same time. Parameter subscribe_depth is set to false.");
@@ -256,8 +268,8 @@ void CommonDataSubscriber::setupCallbacks(ros::NodeHandle & nh, ros::NodeHandle 
 	{
 		if(!subscribedToDepth_ && !subscribedToStereo_ && !subscribedToRGBD_)
 		{
-			ROS_WARN("When subscribing to laser scan, you should subscribe to depth, stereo or rgbd too. Subscribing to depth by default...");
-			subscribedToDepth_ = true;
+			//ROS_WARN("When subscribing to laser scan, you should subscribe to depth, stereo or rgbd too. Subscribing to depth by default...");
+			//subscribedToDepth_ = true;
 		}
 	}
 	if(subscribedToStereo_)
@@ -295,6 +307,19 @@ void CommonDataSubscriber::setupCallbacks(ros::NodeHandle & nh, ros::NodeHandle 
 	ROS_INFO("%s: approx_sync   = %s", name.c_str(), approxSync_?"true":"false");
 
 	bool subscribeOdom = odomFrameId.empty();
+	if(subscribedToPCL_)
+	{
+		setupPclCallbacks(
+				nh,
+				pnh,
+				subscribeOdom,
+				subscribeUserData,
+				subscribeScan2d,
+				subscribeScan3d,
+				subscribeOdomInfo,
+				queueSize_,
+				approxSync_);
+	}
 	if(subscribedToDepth_)
 	{
 		setupDepthCallbacks(
@@ -373,7 +398,7 @@ void CommonDataSubscriber::setupCallbacks(ros::NodeHandle & nh, ros::NodeHandle 
 					approxSync_);
 		}
 	}
-	if(subscribedToDepth_ || subscribedToStereo_ || subscribedToRGBD_)
+	if(subscribedToDepth_ || subscribedToStereo_ || subscribedToRGBD_ || subscribedToPCL_)
 	{
 		warningThread_ = new boost::thread(boost::bind(&CommonDataSubscriber::warningLoop, this));
 		ROS_INFO("%s", subscribedTopicsMsg_.c_str());
@@ -582,6 +607,17 @@ void CommonDataSubscriber::warningLoop()
 					subscribedTopicsMsg_.c_str());
 		}
 	}
+}
+
+void CommonDataSubscriber::commonSinglePclCallback(
+		const nav_msgs::OdometryConstPtr & odomMsg,
+		const sensor_msgs::PointCloud2ConstPtr & pclMsg,
+		const sensor_msgs::LaserScanConstPtr & scanMsg
+		)
+{
+	callbackCalled();	
+	std::vector<sensor_msgs::CameraInfo> cameraInfoMsgs;
+	commonPclCallback(odomMsg, pclMsg, scanMsg);
 }
 
 void CommonDataSubscriber::commonSingleDepthCallback(
