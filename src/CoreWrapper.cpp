@@ -773,7 +773,8 @@ bool CoreWrapper::odomTFUpdate(const ros::Time & stamp)
 void CoreWrapper::commonPclCallback(
 			const nav_msgs::OdometryConstPtr & odomMsg,
 			const sensor_msgs::PointCloud2ConstPtr & pclMsg,
-			const sensor_msgs::LaserScanConstPtr& scan2dMsg)
+			const sensor_msgs::LaserScanConstPtr& scan2dMsg,
+			const sensor_msgs::CameraInfo & cameraInfoMsg)
 {
 	std::string odomFrameId = odomFrameId_;
 	if(odomMsg.get())
@@ -798,6 +799,22 @@ void CoreWrapper::commonPclCallback(
 			return;
 		}
 	}
+	rtabmap::CameraModel  cameraModel;
+
+	if(!rtabmap_ros::convertPCLMsgs(
+				pclMsg,
+				cameraInfoMsg,
+				frameId_,
+				odomSensorSync_?odomFrameId:"",
+				lastPoseStamp_,
+				cameraModel,
+				tfListener_,
+				waitForTransform_?waitForTransformDuration_:0))
+		{
+			NODELET_ERROR("Could not convert pcl msg! Aborting rtabmap update...");
+			return;
+		}
+
 	
 	cv::Mat scan;
 	Transform scanLocalTransform = Transform::getIdentity();
@@ -853,6 +870,7 @@ void CoreWrapper::commonPclCallback(
 					scan2dMsg->range_max:(genScan_?genScanMaxDepth_:0.0f),
 					scanLocalTransform),
 			cloud,
+			cameraModel,
 			lastPoseIntermediate_?-1:(int)scan2dMsg->header.seq,
 			rtabmap_ros::timestampFromROS(lastPoseStamp_),
 			userData);

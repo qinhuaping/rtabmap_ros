@@ -170,6 +170,18 @@ rtabmap::Transform getTransform(
 		tf::TransformListener & listener,
 		double waitForTransform);
 
+bool convertPCLMsgs(
+	const sensor_msgs::PointCloud2ConstPtr & PCLMsg,
+	const sensor_msgs::CameraInfo & cameraInfoMsg,
+	const std::string & frameId,
+	const std::string & odomFrameId,
+	const ros::Time & odomStamp,
+	rtabmap::CameraModel & cameraModel,
+	tf::TransformListener & listener,
+	double waitForTransform
+);
+
+
 bool convertRGBDMsgs(
 		const std::vector<cv_bridge::CvImageConstPtr> & imageMsgs,
 		const std::vector<cv_bridge::CvImageConstPtr> & depthMsgs,

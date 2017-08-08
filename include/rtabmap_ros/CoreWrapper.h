@@ -90,8 +90,8 @@ private:
 	virtual void commonPclCallback(
 				const nav_msgs::OdometryConstPtr & odomMsg,
 				const sensor_msgs::PointCloud2ConstPtr & pclMsg,
-				//const std::vector<sensor_msgs::CameraInfo> & cameraInfoMsgs,
-				const sensor_msgs::LaserScanConstPtr& scan2dMsg
+				const sensor_msgs::LaserScanConstPtr& scan2dMsg,
+				const sensor_msgs::CameraInfo & cameraInfoMsgs
 				);
 
 	virtual void commonDepthCallback(

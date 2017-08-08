@@ -612,12 +612,12 @@ void CommonDataSubscriber::warningLoop()
 void CommonDataSubscriber::commonSinglePclCallback(
 		const nav_msgs::OdometryConstPtr & odomMsg,
 		const sensor_msgs::PointCloud2ConstPtr & pclMsg,
-		const sensor_msgs::LaserScanConstPtr & scanMsg
-		)
+		const sensor_msgs::LaserScanConstPtr & scanMsg,
+		const sensor_msgs::CameraInfo & cameraInfoMsg)
 {
 	callbackCalled();	
 	std::vector<sensor_msgs::CameraInfo> cameraInfoMsgs;
-	commonPclCallback(odomMsg, pclMsg, scanMsg);
+	commonPclCallback(odomMsg, pclMsg, scanMsg,cameraInfoMsg);
 }
 
 void CommonDataSubscriber::commonSingleDepthCallback(

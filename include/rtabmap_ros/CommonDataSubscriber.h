@@ -73,7 +73,8 @@ protected:
 	virtual void commonPclCallback(
 				const nav_msgs::OdometryConstPtr & odomMsg,
 			    const sensor_msgs::PointCloud2ConstPtr & pclMsg,
-				const sensor_msgs::LaserScanConstPtr& scanMsg) = 0;
+				const sensor_msgs::LaserScanConstPtr& scanMsg,
+				const sensor_msgs::CameraInfo & cameraInfoMsg) = 0;
 
 	virtual void commonDepthCallback(
 				const nav_msgs::OdometryConstPtr & odomMsg,
@@ -96,8 +97,8 @@ protected:
 	void commonSinglePclCallback(
 				const nav_msgs::OdometryConstPtr & odomMsg,
 				const sensor_msgs::PointCloud2ConstPtr & pclMsg,
-				//const sensor_msgs::CameraInfo & cameraInfoMsg,
-				const sensor_msgs::LaserScanConstPtr& scanMsg);
+				const sensor_msgs::LaserScanConstPtr& scanMsg,
+				const sensor_msgs::CameraInfo & cameraInfoMsg);
 
 	void commonSingleDepthCallback(
 				const nav_msgs::OdometryConstPtr & odomMsg,
@@ -223,7 +224,7 @@ private:
 	message_filters::Subscriber<rtabmap_ros::OdomInfo> odomInfoSub_;
 
 	//PCL+ odom+userdata
-	DATA_SYNCS3(pclOdomDataScan2d,nav_msgs::Odometry,sensor_msgs::PointCloud2,sensor_msgs::LaserScan);
+	DATA_SYNCS4(pclOdomDataScan2d,nav_msgs::Odometry,sensor_msgs::PointCloud2,sensor_msgs::LaserScan,sensor_msgs::CameraInfo);
 
 
 	// RGB + Depth

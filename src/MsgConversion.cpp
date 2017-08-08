@@ -1091,6 +1091,50 @@ rtabmap::Transform getTransform(
 	}
 	return transform;
 }
+bool convertPCLMsgs(
+	const sensor_msgs::PointCloud2ConstPtr & PCLMsg,
+	const sensor_msgs::CameraInfo & cameraInfoMsg,
+	const std::string & frameId,
+	const std::string & odomFrameId,
+	const ros::Time & odomStamp,
+	rtabmap::CameraModel & cameraModel,
+	tf::TransformListener & listener,
+	double waitForTransform)
+{
+	//USSART(PCLMsgs.size()>0 && cameraInfoMsgs.size()>0 );
+	// use depth's stamp so that geometry is sync to odom, use rgb frame as we assume depth is registered (normally depth msg should have same frame than rgb)
+	rtabmap::Transform localTransform = rtabmap_ros::getTransform
+		(frameId, PCLMsg->header.frame_id, PCLMsg->header.stamp, listener, waitForTransform);
+	if(localTransform.isNull())
+	{
+		//ROS_ERROR("TF of received depth image %d at time %fs is not set!", i, depthMsgs[i]->header.stamp.toSec());
+		return false;
+	}
+	// sync with odometry stamp
+	if(!odomFrameId.empty() && odomStamp != PCLMsg->header.stamp)
+	{
+		rtabmap::Transform sensorT = getTransform(
+				frameId,
+				odomFrameId,
+				odomStamp,
+				PCLMsg->header.stamp,
+				listener,
+				waitForTransform);
+		if(sensorT.isNull())
+		{
+			ROS_WARN("Could not get odometry value for depth image stamp (%fs). Latest odometry "
+					"stamp is %fs. The depth image pose will not be synchronized with odometry.", PCLMsg->header.stamp.toSec(), odomStamp.toSec());
+		}
+		else
+		{
+			//ROS_WARN("RGBD correction = %s (time diff=%fs)", sensorT.prettyPrint().c_str(), fabs(depthMsgs[i]->header.stamp.toSec()-odomStamp.toSec()));
+			localTransform = sensorT * localTransform;
+		}
+	}
+	cameraModel = rtabmap_ros::cameraModelFromROS(cameraInfoMsg, localTransform);
+	return true;
+}
+
 
 bool convertRGBDMsgs(
 		const std::vector<cv_bridge::CvImageConstPtr> & imageMsgs,

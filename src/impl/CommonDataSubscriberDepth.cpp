@@ -341,18 +341,20 @@ void CommonDataSubscriber::setupPclCallbacks(
 	userDataSub_.subscribe(nh, "user_data", 1);
 	subscribedToScan2d_ = true;
 	scanSub_.subscribe(nh, "scan", 1);
-	SYNC_DECL3(pclOdomDataScan2d, approxSync, queueSize, odomSub_,  pclSub_, scanSub_);
+	cameraInfoSub_.subscribe(nh, "camera_info", 1);
+	SYNC_DECL4(pclOdomDataScan2d, approxSync, queueSize, odomSub_,  pclSub_, scanSub_,cameraInfoSub_);
 	
 }
 
 void CommonDataSubscriber::pclOdomDataScan2dCallback(
 		const nav_msgs::OdometryConstPtr & odomMsg,
 		const sensor_msgs::PointCloud2ConstPtr & pclMsg,
-		const sensor_msgs::LaserScanConstPtr& scanMsg
+		const sensor_msgs::LaserScanConstPtr& scanMsg,
+		const sensor_msgs::CameraInfoConstPtr & cameraInfoMsg
 		)
 {
     //ROS_WARN("HELLO");
-	commonSinglePclCallback(odomMsg,pclMsg,scanMsg);
+	commonSinglePclCallback(odomMsg,pclMsg,scanMsg,*cameraInfoMsg);
 }
 
 void CommonDataSubscriber::setupDepthCallbacks(
